@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Grade Card</title>
+    <style>
+        :root { --ink:#1f2a44; --muted:#6b7488; --gold:#b08d57; --line:#e3ddd0;
+                --f:#d64545; --d:#e8833a; --c:#d9a900; --b:#3b82c4; --a:#2f9e6a; --aplus:#7a5cc9; }
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 40px 16px; background: #f4f1ea; color: var(--ink);
+               font-family: "Segoe UI", system-ui, Arial, sans-serif; display: flex; flex-direction: column; align-items: center; gap: 28px; }
+
+        .g-f { --accent: var(--f); } .g-d { --accent: var(--d); } .g-c { --accent: var(--c); }
+        .g-b { --accent: var(--b); } .g-a { --accent: var(--a); } .g-aplus { --accent: var(--aplus); }
+
+        /* PAN-card size: 85.6mm x 54mm */
+        .idcard { width: 428px; max-width: 100%; aspect-ratio: 85.6 / 54; background: linear-gradient(135deg, #fffdf9, #f6efe0);
+                  border: 1px solid #d9cfb8; border-radius: 12px; box-shadow: 0 10px 28px rgba(31,42,68,.18);
+                  display: flex; flex-direction: column; overflow: hidden; }
+        .idhead { background: var(--ink); color: #f3e9d2; font-size: 11px; letter-spacing: 3px; text-align: center; padding: 9px 0;
+                  border-bottom: 3px solid var(--gold); }
+        .idbody { flex: 1; display: flex; align-items: center; justify-content: space-between; padding: 0 22px; gap: 14px; }
+        .fields { display: flex; flex-direction: column; gap: 9px; min-width: 0; }
+        .f { display: flex; flex-direction: column; }
+        .k { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+        .v { font-family: Georgia, "Times New Roman", serif; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .stamp { flex: none; width: 92px; height: 92px; border-radius: 50%; border: 3px solid var(--accent); color: var(--accent);
+                 display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .stamp .gl { font-size: 9px; letter-spacing: 2px; }
+        .stamp .gv { font-family: Georgia, serif; font-size: 40px; font-weight: bold; line-height: 1; }
+        .idfoot { display: flex; justify-content: space-between; padding: 7px 22px; font-size: 10px; letter-spacing: 1.5px; color: var(--muted);
+                  border-top: 1px dashed #d9cfb8; }
+        .idfoot b { color: var(--accent); }
+
+        /* Below the card */
+        .panel { width: 428px; max-width: 100%; background: #fffdf9; border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; }
+        .panel h2 { font-family: Georgia, serif; font-weight: normal; font-size: 17px; margin: 0 0 14px; }
+
+        .track { position: relative; margin: 44px 0 6px; }
+        .bar { display: flex; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 14px rgba(31,42,68,.18); }
+        .band { min-width: 0; border-right: 2px solid #fffdf9; text-align: center; transition: transform .2s; }
+        .band:last-child { border-right: 0; }
+        .band .blk { height: 46px; display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 15px; letter-spacing: .5px;
+                     background-color: var(--col); background-image: linear-gradient(180deg, rgba(255,255,255,.28), rgba(0,0,0,.10));
+                     text-shadow: 0 1px 2px rgba(0,0,0,.25); }
+        .band small { display: block; font-size: 10.5px; color: var(--muted); margin-top: 7px; white-space: nowrap; }
+        .band.active .blk { box-shadow: inset 0 0 0 3px rgba(255,255,255,.85); font-size: 18px; }
+        .band.active small { color: var(--ink); font-weight: 700; }
+        .pin { position: absolute; top: -40px; left: 0; width: 0; transition: left .5s ease; }
+        .pin span { position: absolute; bottom: 0; left: 0; transform: translateX(-50%); background: var(--ink); color: #fff; font-weight: 700; font-size: 12px;
+                    padding: 4px 10px; border-radius: 999px; white-space: nowrap; box-shadow: 0 4px 10px rgba(31,42,68,.3); }
+        .pin i { position: absolute; top: 28px; left: -6px; border: 6px solid transparent; border-top-color: var(--ink); border-bottom: 0; }
+        .pin::after { content: ""; position: absolute; left: -1px; top: 34px; width: 2px; height: 14px; background: var(--ink); }
+        .score { margin: 16px 0 0; font-size: 14px; color: var(--muted); text-align: center; }
+        .score b { color: var(--ink); }
+
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        td { padding: 8px 0; border-bottom: 1px solid var(--line); }
+        tr:last-child td { border-bottom: 0; }
+        td.r { text-align: right; }
+        .chip { display: inline-block; min-width: 26px; text-align: center; font-size: 11px; font-weight: 700; color: #fff; background: var(--accent);
+                border-radius: 4px; padding: 1px 6px; margin-left: 8px; }
+
+        .actions { display: flex; gap: 10px; }
+        .actions a, .actions button { padding: 11px 22px; font-size: 14px; border-radius: 8px; text-decoration: none; cursor: pointer; border: 1px solid var(--ink); }
+        .actions a { background: var(--ink); color: #fff; }
+        .actions button { background: transparent; color: var(--ink); }
+
+        @media print {
+            body { background: #fff; padding: 0; }
+            .panel, .actions { display: none; }
+            .idcard { width: 85.6mm; height: 54mm; box-shadow: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- PAN-card sized grade card -->
+<div class="idcard" th:classappend="'g-' + ${student.gradeClass}">
+    <div class="idhead">STUDENT GRADE CARD</div>
+    <div class="idbody">
+        <div class="fields">
+            <div class="f"><span class="k">Student</span><span class="v" th:text="${student.name}">Alex</span></div>
+            <div class="f"><span class="k">Total</span><span class="v" th:text="${student.total} + ' / ' + ${student.maxTotal}">425 / 500</span></div>
+            <div class="f"><span class="k">Percentage</span><span class="v" th:text="${student.percentageText} + '%'">85.0%</span></div>
+        </div>
+        <div class="stamp">
+            <span class="gl">GRADE</span>
+            <span class="gv" th:text="${student.grade}">A</span>
+        </div>
+    </div>
+    <div class="idfoot"><span th:text="${student.subjectCount} + (${student.subjectCount} == 1 ? ' SUBJECT' : ' SUBJECTS')">5 SUBJECTS</span><b th:text="${student.status}">PASS</b></div>
+</div>
+
+<!-- Grade graph -->
+<div class="panel">
+    <h2>Grade graph</h2>
+    <div class="track">
+        <div class="pin" id="pin"><span id="pinLabel"></span><i></i></div>
+        <div class="bar">
+            <div class="band" data-g="F"  style="flex:35; --col:var(--f)"><div class="blk">F</div><small>0–34 Fail</small></div>
+            <div class="band" data-g="D"  style="flex:15; --col:var(--d)"><div class="blk">D</div><small>35–49</small></div>
+            <div class="band" data-g="C"  style="flex:10; --col:var(--c)"><div class="blk">C</div><small>50–59</small></div>
+            <div class="band" data-g="B"  style="flex:15; --col:var(--b)"><div class="blk">B</div><small>60–74</small></div>
+            <div class="band" data-g="A"  style="flex:15; --col:var(--a)"><div class="blk">A</div><small>75–89</small></div>
+            <div class="band" data-g="A+" style="flex:10; --col:var(--aplus)"><div class="blk">A+</div><small>90–100</small></div>
+        </div>
+    </div>
+    <p class="score">Score <b><span id="pct" th:text="${student.percentageText}">85.0</span>%</b> &middot; Grade <b th:text="${student.grade}">A</b> &middot; <b th:text="${student.status}">PASS</b> (pass mark 35%)</p>
+</div>
+
+<div class="actions">
+    <a th:href="@{/}">New student</a>
+    <button type="button" onclick="window.print()">Print card</button>
+</div>
+
+<script>
+    (function () {
+        var pct = parseFloat(document.getElementById('pct').textContent);
+        if (isNaN(pct)) return;
+        pct = Math.max(0, Math.min(100, pct));
+
+        var grade = pct >= 90 ? 'A+' : pct >= 75 ? 'A' : pct >= 60 ? 'B' : pct >= 50 ? 'C' : pct >= 35 ? 'D' : 'F';
+        var cls = grade === 'A+' ? 'aplus' : grade.toLowerCase();
+
+        // highlight the student's band
+        var bands = document.querySelectorAll('.band');
+        for (var i = 0; i < bands.length; i++) {
+            if (bands[i].getAttribute('data-g') === grade) bands[i].classList.add('active');
+        }
+
+        // place the pin at the exact percentage
+        document.getElementById('pin').style.left = pct + '%';
+        document.getElementById('pinLabel').textContent = pct.toFixed(1) + '%';
+
+        // make sure the grade card uses the grade colour
+        var card = document.querySelector('.idcard');
+        ['f','d','c','b','a','aplus'].forEach(function (c) { card.classList.remove('g-' + c); });
+        card.classList.add('g-' + cls);
+    })();
+</script>
+</body>
+</html>

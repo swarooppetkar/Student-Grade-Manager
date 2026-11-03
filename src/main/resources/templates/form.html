@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Student Grade Manager</title>
+    <style>
+        :root { --ink:#1f2a44; --muted:#6b7488; --gold:#b08d57; --line:#e3ddd0; --paper:#fffdf9; }
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 40px 16px; background: #f4f1ea; color: var(--ink);
+               font-family: "Segoe UI", system-ui, Arial, sans-serif; }
+        .wrap { max-width: 560px; margin: 0 auto; }
+        h1 { font-family: Georgia, "Times New Roman", serif; font-weight: normal; font-size: 32px; margin: 0 0 4px; text-align: center; }
+        .sub { text-align: center; color: var(--muted); margin: 0 0 24px; font-size: 14px; }
+        .card { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 28px; box-shadow: 0 6px 24px rgba(31,42,68,.08); }
+
+        label { display: block; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+        input, select { width: 100%; padding: 11px 12px; font-size: 15px; color: var(--ink); background: #fff;
+                        border: 1px solid var(--line); border-radius: 8px; outline: none; transition: border-color .15s, box-shadow .15s; }
+        input:focus, select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(176,141,87,.18); }
+        .field { margin-bottom: 20px; }
+        .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .dim { opacity: .5; }
+        .summary { font-size: 13px; color: var(--muted); margin-top: 8px; }
+
+        .head { font-family: Georgia, serif; font-size: 18px; margin: 4px 0 12px; padding-top: 18px; border-top: 1px solid var(--line); }
+        #rows { counter-reset: r; display: flex; flex-direction: column; gap: 10px; }
+        .row { display: grid; grid-template-columns: 26px 1fr 100px; gap: 10px; align-items: center; }
+        .row::before { counter-increment: r; content: counter(r); color: var(--gold); font-family: Georgia, serif; font-size: 16px; text-align: center; }
+
+        .errors { background: #fdf0ee; border: 1px solid #e7b4ad; color: #8c2a1f; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 14px; }
+        .errors ul { margin: 6px 0 0; padding-left: 18px; }
+
+        button { width: 100%; margin-top: 22px; padding: 13px; font-size: 15px; letter-spacing: .5px; color: #fff; cursor: pointer;
+                 background: var(--ink); border: 0; border-radius: 8px; transition: background .15s; }
+        button:hover { background: #2f3f66; }
+        @media (max-width: 480px) { .pair { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <h1>Student Grade Manager</h1>
+    <p class="sub">Enter the marks to generate a grade card.</p>
+
+    <div class="card">
+        <div class="errors" th:if="${errors != null}">
+            <strong>Please fix the following:</strong>
+            <ul><li th:each="e : ${errors}" th:text="${e}"></li></ul>
+        </div>
+
+        <form th:action="@{/report}" method="post" novalidate>
+            <div class="field">
+                <label for="name">Student name</label>
+                <input id="name" type="text" name="name" th:value="${name}" placeholder="e.g. Alex" autocomplete="off">
+            </div>
+
+            <div class="pair">
+                <div class="field">
+                    <label for="count">Subjects (1 – 10)</label>
+                    <select id="count">
+                        <option value="1" th:selected="${selected == 1}">1</option>
+                        <option value="2" th:selected="${selected == 2}">2</option>
+                        <option value="3" th:selected="${selected == 3}">3</option>
+                        <option value="4" th:selected="${selected == 4}">4</option>
+                        <option value="5" th:selected="${selected == 5}" selected>5</option>
+                        <option value="6" th:selected="${selected == 6}">6</option>
+                        <option value="7" th:selected="${selected == 7}">7</option>
+                        <option value="8" th:selected="${selected == 8}">8</option>
+                        <option value="9" th:selected="${selected == 9}">9</option>
+                        <option value="10" th:selected="${selected == 10}">10</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="custom">More? Enter a number</label>
+                    <input id="custom" type="number" min="1" max="50" th:value="${custom}" placeholder="up to 50">
+                </div>
+            </div>
+            <div class="summary" id="summary"></div>
+
+            <div class="head">Marks (out of 100)</div>
+            <div id="rows">
+                <div class="row" th:each="r : ${rows}">
+                    <input type="text" name="subject" th:value="${r.subject}" placeholder="Subject" autocomplete="off">
+                    <input type="number" name="mark" th:value="${r.mark}" placeholder="0 - 100" min="0" max="100" step="1">
+                </div>
+            </div>
+
+            <button type="submit">Generate grade card</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    var sel = document.getElementById('count');
+    var custom = document.getElementById('custom');
+    var rows = document.getElementById('rows');
+    var summary = document.getElementById('summary');
+
+    function currentCount() {
+        var c = parseInt(custom.value, 10);
+        if (!isNaN(c) && c >= 1) {
+            if (c > 50) { c = 50; custom.value = 50; }
+            return c;
+        }
+        return parseInt(sel.value, 10);
+    }
+
+    function addRow() {
+        var div = document.createElement('div');
+        div.className = 'row';
+        div.innerHTML =
+            '<input type="text" name="subject" placeholder="Subject" autocomplete="off">' +
+            '<input type="number" name="mark" placeholder="0 - 100" min="0" max="100" step="1">';
+        rows.appendChild(div);
+    }
+
+    function render() {
+        var n = currentCount();
+        while (rows.children.length < n) addRow();
+        while (rows.children.length > n) rows.removeChild(rows.lastElementChild);
+        var usingCustom = custom.value !== '' && !isNaN(parseInt(custom.value, 10));
+        sel.classList.toggle('dim', usingCustom);
+        summary.textContent = n + (n === 1 ? ' subject' : ' subjects') + ' · maximum total ' + (n * 100);
+    }
+
+    sel.addEventListener('change', function () { custom.value = ''; render(); });
+    custom.addEventListener('input', render);
+    render();
+</script>
+</body>
+</html>
